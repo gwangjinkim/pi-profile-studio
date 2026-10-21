@@ -1,0 +1,30 @@
+{
+  "name": "pi-profile-studio",
+  "version": "1.0.0",
+  "description": "Interactive profile, model, API key, and extension switchboard for Pi Coding Agent with customizable inline notes.",
+  "keywords": [
+    "pi-package",
+    "pi-coding-agent",
+    "pi-extension",
+    "ai-agent",
+    "model-switcher",
+    "extension-manager",
+    "profiles",
+    "opencode"
+  ],
+  "homepage": "https://github.com/gwangjinkim/pi-profile-studio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gwangjinkim/pi-profile-studio.git"
+  },
+  "license": "MIT",
+  "author": "Gwang Jin Kim (https://github.com/gwangjinkim)",
+  "pi": {
+    "extensions": [
+      "./extensions/profile-studio.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}
