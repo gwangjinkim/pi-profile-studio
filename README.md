@@ -54,6 +54,8 @@ Then run `/reload` inside Pi (or start a new `pi` session).
 | **`/models all`** | Show all models (including hidden ones) to toggle which models are allowed or hidden in the active profile. |
 | **`/ext`** | List all installed packages and local extensions **with your custom notes**, toggle them ON/OFF, or edit notes. |
 | **`/keys`** | View and manage provider API keys, toggle provider visibility per profile, and edit key notes. |
+| **`/studio export [profile]`** | Write `pi-profile.json` for the active (or named) profile into the directory that holds `pibox.toml` / `agentbox.toml`, so `pibox export` and `agentbox export` share the same setup. API key values are never written. |
+| **`/studio import [path]`** | Add a new local profile from `pi-profile.json` (or an explicit path), without overwriting a profile that already has that name. |
 
 ---
 
@@ -67,6 +69,8 @@ Pi Profile Studio — [opencode-free]
   API Keys & Provider Visibility
   Built-in Tools (read, bash, edit, write, grep, find, ls)
   Edit Active Profile's Name & Note
+  Export Profile (pi-profile.json beside pibox.toml / agentbox.toml)
+  Import Profile (from pi-profile.json)
   Create New Profile
 ```
 

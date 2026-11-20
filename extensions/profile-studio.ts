@@ -1157,6 +1157,8 @@ export default function profileStudioExtension(pi: ExtensionAPI): void {
 				`🔑 API Keys & Provider Visibility`,
 				`🛠️ Built-in Tools (${prof.activeTools?.join(", ") || "all"})`,
 				`✏️ Edit Active Profile's Name & Note`,
+				`📤 Export Profile (pi-profile.json beside pibox.toml / agentbox.toml)`,
+				`📥 Import Profile (from pi-profile.json)`,
 				`➕ Create New Profile`,
 				`🗑️ Delete a Profile`,
 				`❌ Close Studio`,
@@ -1220,6 +1222,16 @@ export default function profileStudioExtension(pi: ExtensionAPI): void {
 				if (newNote !== undefined) prof.note = newNote;
 				saveStudioConfig(cfg);
 				ctx.ui.notify(`Updated info for [${cfg.activeProfile}]`, "info");
+				continue;
+			}
+
+			if (selected.startsWith("📤 Export Profile")) {
+				await exportProfile(ctx);
+				continue;
+			}
+
+			if (selected.startsWith("📥 Import Profile")) {
+				await importProfile(ctx);
 				continue;
 			}
 
