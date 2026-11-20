@@ -9,6 +9,7 @@
  *   /models               - Switch models, filter allowed models, and edit model notes
  *   /ext                  - Toggle extensions/packages on/off and edit extension notes
  *   /keys                 - Manage provider API keys, visibility, and key notes
+ *   /studio export|import - Share a profile as pi-profile.json beside pibox.toml/agentbox.toml
  *
  * Repository: https://github.com/gwangjinkim/pi-profile-studio
  * License: MIT
@@ -278,6 +279,138 @@ function loadStudioConfig(): StudioConfig {
 
 function saveStudioConfig(cfg: StudioConfig): void {
 	writeJsonFile(getStudioConfigPath(), cfg);
+}
+
+/**
+ * Shared profile file, committed next to pibox.toml / agentbox.toml.
+ * Never holds envOverrides: those hold API key values.
+ */
+const SIDECAR_NAME = "pi-profile.json";
+
+interface ProfileSidecar {
+	version: number;
+	profile: Partial<ProfileDefinition>;
+	/** Manifest-style source -> version ("npm:pi-effort": "0.1.1"). */
+	extensions: Record<string, string>;
+	modelNotes?: Record<string, string>;
+	extensionNotes?: Record<string, string>;
+	keyNotes?: Record<string, string>;
+}
+
+/** Directory holding pibox.toml or agentbox.toml, found the way both tools find it; else cwd. */
+function findManifestDir(): string {
+	let dir = process.cwd();
+	while (true) {
+		if (fs.existsSync(path.join(dir, "pibox.toml")) || fs.existsSync(path.join(dir, "agentbox.toml"))) {
+			return dir;
+		}
+		const parent = path.dirname(dir);
+		if (parent === dir) return process.cwd();
+		dir = parent;
+	}
+}
+
+/** Same source -> version resolution pibox/agentbox use for their manifests. */
+function extensionVersion(source: string): string {
+	if (source.startsWith("npm:")) {
+		const name = source.slice(4).replace(/@[^@/]*$/, "");
+		const pkg = readJsonFile<{ version?: string }>(
+			path.join(getAgentDir(), "npm", "node_modules", name, "package.json"),
+			{},
+		);
+		return pkg.version || "unknown";
+	}
+	return source.startsWith("git:") ? "HEAD" : "path";
+}
+
+function sidecarExtId(source: string): string {
+	return source.startsWith("extensions/") ? `local:${path.basename(source)}` : `pkg:${source}`;
+}
+
+async function exportProfile(ctx: ExtensionCommandContext, profileId?: string): Promise<void> {
+	const cfg = loadStudioConfig();
+	const id = profileId || cfg.activeProfile;
+	const profile = cfg.profiles[id];
+	if (!profile) {
+		ctx.ui.notify(`No profile named '${id}'.`, "warning");
+		return;
+	}
+
+	const sources = new Map(discoverAllExtensions(cfg).map((e) => [e.id, e.rawSource]));
+	const extensions: Record<string, string> = {};
+	for (const extId of profile.activeExtensions || []) {
+		const source = sources.get(extId);
+		if (source) extensions[source] = extensionVersion(source);
+	}
+
+	const exported: Partial<ProfileDefinition> = { ...profile };
+	delete exported.envOverrides;
+	delete exported.activeExtensions;
+
+	const sidecar: ProfileSidecar = {
+		version: 1,
+		profile: exported,
+		extensions,
+		modelNotes: cfg.modelNotes,
+		extensionNotes: cfg.extensionNotes,
+		keyNotes: cfg.keyNotes,
+	};
+
+	const file = path.join(findManifestDir(), SIDECAR_NAME);
+	if (fs.existsSync(file)) {
+		const overwrite = await ctx.ui.confirm("Overwrite pi-profile.json?", `${file} already exists. Replace it?`);
+		if (!overwrite) return;
+	}
+	writeJsonFile(file, sidecar);
+	ctx.ui.notify(`Exported [${id}] (${Object.keys(extensions).length} extensions) to ${file}`, "info");
+}
+
+async function importProfile(ctx: ExtensionCommandContext, filePath?: string): Promise<void> {
+	const file = filePath ? path.resolve(filePath) : path.join(findManifestDir(), SIDECAR_NAME);
+	if (!fs.existsSync(file)) {
+		ctx.ui.notify(`No ${SIDECAR_NAME} at ${file}.`, "warning");
+		return;
+	}
+	const sidecar = readJsonFile<ProfileSidecar | null>(file, null);
+	if (!sidecar || !sidecar.profile || typeof sidecar.extensions !== "object") {
+		ctx.ui.notify(`${file} is not a Pi profile file.`, "error");
+		return;
+	}
+
+	const cfg = loadStudioConfig();
+	const base = (sidecar.profile.name || "imported")
+		.toLowerCase()
+		.replace(/[^a-z0-9._-]+/g, "-")
+		.replace(/^-+|-+$/g, "") || "imported";
+	let id = base;
+	for (let n = 2; cfg.profiles[id]; n++) id = `${base}-${n}`;
+
+	const p = sidecar.profile;
+	cfg.profiles[id] = {
+		name: p.name || id,
+		note: p.note || "",
+		defaultProvider: p.defaultProvider,
+		defaultModel: p.defaultModel,
+		thinkingLevel: p.thinkingLevel,
+		allowedModels: p.allowedModels || [],
+		allowedProviders: p.allowedProviders || [],
+		activeExtensions: Object.keys(sidecar.extensions).map(sidecarExtId),
+		activeTools: p.activeTools || [],
+	};
+	cfg.knownPackages = Array.from(
+		new Set([
+			...(cfg.knownPackages || []),
+			...Object.keys(sidecar.extensions).filter((s) => s.startsWith("npm:") || s.startsWith("git:")),
+		]),
+	);
+	Object.assign(cfg.modelNotes, sidecar.modelNotes || {});
+	Object.assign(cfg.extensionNotes, sidecar.extensionNotes || {});
+	Object.assign(cfg.keyNotes, sidecar.keyNotes || {});
+	saveStudioConfig(cfg);
+	ctx.ui.notify(
+		`Imported profile [${id}] (${cfg.profiles[id].activeExtensions.length} extensions). Activate with /studio ${id}.`,
+		"info",
+	);
 }
 
 /**
@@ -1118,8 +1251,16 @@ export default function profileStudioExtension(pi: ExtensionAPI): void {
 	// SLASH COMMAND REGISTRATIONS
 	// =========================================================================
 
-	const studioHandler = async (args: string, ctx: ExtensionCommandContext) => {
-		const trimmed = args.trim();
+		const studioHandler = async (args: string, ctx: ExtensionCommandContext) => {
+	const trimmed = args.trim();
+	if (trimmed === "export" || trimmed.startsWith("export ")) {
+		await exportProfile(ctx, trimmed.slice(6).trim() || undefined);
+		return;
+	}
+	if (trimmed === "import" || trimmed.startsWith("import ")) {
+		await importProfile(ctx, trimmed.slice(6).trim() || undefined);
+		return;
+	}
 		if (trimmed === "models" || trimmed === "m") {
 			await openModelsMenu(ctx, false);
 			return;
