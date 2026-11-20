@@ -59,6 +59,12 @@ Then run `/reload` inside Pi (or start a new `pi` session).
 
 ---
 
+## Using with `pibox` / `agentbox`
+
+`/studio export` and `/studio import` exist so a profile can be shared with a project that builds its environment from a committed manifest. The walkthrough, including what travels in git, what the sandbox seeds from your host, and what to re-run after a profile change, is in [docs/pibox-agentbox.md](docs/pibox-agentbox.md).
+
+---
+
 ## Interactive TUI Preview
 
 ```text
