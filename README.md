@@ -108,6 +108,19 @@ Holds `activeProfile`, `profiles`, `extensionNotes`, and `savedPackageEntries` (
 
 ---
 
+## Upgrading from the earlier `profile-studio.json`
+
+An older config may still carry `envOverrides`, `modelNotes` and `keyNotes`. None of the three is read or written any more, and the extension no longer applies an environment override or stores a key, so those values are simply ignored.
+
+They are also not deleted for you. Remove them:
+
+```bash
+jq 'del(.envOverrides, .modelNotes, .keyNotes)' ~/.pi/agent/profile-studio.json > profile-studio.json.tmp \
+  && mv profile-studio.json.tmp ~/.pi/agent/profile-studio.json
+```
+
+If you kept API keys in `envOverrides` (the old way of passing one to a provider), those values are plaintext in that file and stopped being applied. Delete them as above, put the key in `auth.json` or your keyring, and export `OPENCODE_API_KEY` for OpenCode Go. Treat any key that sat there as exposed and rotate it. Copies already synced into a sandbox (`.pibox/env/profile-studio.json`, `.agentbox/env/pi/profile-studio.json`) hold the same values.
+
 ## License
 
 MIT © [Gwang Jin Kim](https://github.com/gwangjinkim)

@@ -169,7 +169,7 @@ function saveStudioConfig(cfg: StudioConfig): void {
  * Rewrite only the settings entries this profile owns. Everything else is left as written:
  * package object form and per-resource filters, extension rules such as !builtin:*, and enabledModels.
  */
-function applyProfileToSettings(settings: Record<string, any>, cfg: StudioConfig, profile: ProfileDefinition): void {
+export function applyProfileToSettings(settings: Record<string, any>, cfg: StudioConfig, profile: ProfileDefinition): void {
 	const allExts = discoverAllExtensions(settings);
 	const active = new Set(profile.activeExtensions || []);
 	const saved = (cfg.savedPackageEntries ??= {});
