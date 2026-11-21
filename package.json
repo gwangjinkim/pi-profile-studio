@@ -1,16 +1,15 @@
 {
   "name": "pi-profile-studio",
   "version": "1.0.0",
-  "description": "Interactive profile, model, API key, and extension switchboard for Pi Coding Agent with customizable inline notes.",
+  "description": "Portable Pi profiles for manifest-built sandboxes: export and import pi-profile.json and apply its extension on/off set.",
   "keywords": [
     "pi-package",
     "pi-coding-agent",
     "pi-extension",
     "ai-agent",
-    "model-switcher",
-    "extension-manager",
+    "pibox",
+    "agentbox",
     "profiles",
-    "opencode"
   ],
   "homepage": "https://github.com/gwangjinkim/pi-profile-studio",
   "repository": {

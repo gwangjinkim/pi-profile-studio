@@ -14,8 +14,8 @@ If a profile change should reach a teammate, export it. Nothing is picked up aut
 
 | Piece | Where | Travels in git? |
 | :--- | :--- | :--- |
-| Profiles, notes, visibility (`/studio`, `/models`, `/keys`) | `~/.pi/agent/profile-studio.json` | No, copied into the sandbox at sync |
-| One exported profile plus notes | `pi-profile.json` next to the manifest | Yes |
+| Profiles and extension notes (`/studio`, `/ext`) | `~/.pi/agent/profile-studio.json` | No, copied into the sandbox at sync |
+| One exported profile plus its extension notes | `pi-profile.json` next to the manifest | Yes |
 | Live on/off state, default model, enabled models | `~/.pi/agent/settings.json` | No |
 | Installed sources and versions | `pibox.toml` + `pibox.lock`, `agentbox.toml` + `agentbox.lock` | Yes |
 | Disabled packages (the profile's OFF set) | `pibox.lock` `disabled`, `agentbox.toml` `[agents.pi] disabled` | Yes |
@@ -47,7 +47,7 @@ pibox run                    # or: agentbox run --agent pi
 
 `pibox export` records the installed extensions and the disabled set from the active profile. `agentbox export` does the same per agent; add `--agent pi` to limit it to pi.
 
-`/studio export` adds what the manifest does not carry: default provider and model, allowed models and providers, tools, thinking level, and the notes for models, extensions and keys. Key values are stripped (`envOverrides` is never written), so the file is safe to commit.
+`/studio export` adds what the manifest does not carry: default provider and model, allowed models, tools, thinking level, and the notes for the extensions the profile lists. The format has no field for a key or an environment value, so the file is safe to commit.
 
 ## Receiving a project
 
@@ -68,12 +68,12 @@ Then, in pi, import the shared profile and activate it:
 
 `/studio import` never overwrites: an existing profile with that name gets `-2`, `-3`, ... appended. Shared notes are merged into yours and win on the same key.
 
-Finally bring your own credentials. Nothing secret travelled: register keys in your keyring (`skey set <provider>` for pibox, `agentbox keys` for agentbox) or let each tool read its own auth. If the shared profile used `envOverrides`, set those again locally; they are per machine by design.
+Finally bring your own credentials. Nothing secret travelled: register keys in your keyring (`skey set <provider>` for pibox, `agentbox keys` for agentbox) or let each tool read its own auth.
 
 ## Inside the sandbox
 
 - The agent directory is the environment, not `~/.pi/agent`: pibox mounts `.pibox/env`, agentbox mounts `.agentbox/env/pi` at the pi agent directory.
-- `/studio`, `/models`, `/ext` and `/keys` work normally. Switching a profile inside persists for that session, because it rewrites the environment's `settings.json`.
+- `/studio`, `/studio <name>` and `/ext` work normally. Switching a profile inside persists for that session, because it rewrites the environment's `settings.json`.
 - The environment is rebuilt from scratch on every `sync`, so profile edits made inside are discarded. Manage profiles on the host, or copy the environment's `profile-studio.json` back before syncing.
 - `/studio export` inside the sandbox still works: the project is the working directory, so `pi-profile.json` lands in the repo. With `--workspace git` it lands in the worktree, so commit from there.
 
@@ -83,7 +83,7 @@ Finally bring your own credentials. Nothing secret travelled: register keys in y
 | :--- | :--- |
 | Toggled an extension on or off in the active profile | `pibox export` / `agentbox export` (updates the disabled set) |
 | Added a package and enabled it in `/ext` | `pibox add <source>` or `agentbox add ... --agent pi`, then `/studio export` |
-| Changed the profile's model, tools, visibility or notes | `/studio export` |
+| Changed the profile's model, tools or extension notes | `/studio export` |
 | Changed only your local notes for this machine | nothing |
 
 A stale repo is not silently repaired. `sync` trusts the manifest and only reads your `~/.pi/agent/settings.json` for a manifest written before the `disabled` field existed, so run the export once after upgrading and the repo owns the state from then on.
